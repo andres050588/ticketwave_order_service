@@ -1,5 +1,5 @@
 import Order from "../models/orderModel.js"
-import Ticket from "../models/ticketModel.js"
+import { getTicketById } from "../utils/getTicketById.js"
 import { Op } from "sequelize"
 
 // CREA UN ORDINE
@@ -11,7 +11,7 @@ export const createOrder = async (req, res) => {
         if (!ticketId) return res.status(400).json({ error: "ticketId è obbligatorio" })
 
         // Recupera il biglietto
-        const ticket = await Ticket.findByPk(ticketId)
+        const ticket = await getTicketById(ticketId)
         if (!ticket) return res.status(404).json({ error: "Biglietto non trovato" })
 
         // Verifica se l'utente è il venditore del biglietto
@@ -55,13 +55,6 @@ export const getUserOrders = async (req, res) => {
                 userId,
                 [Op.or]: [{ status: { [Op.not]: "impegnato" } }, { status: "impegnato", expiresAt: { [Op.gte]: nowMinus2Min } }]
             },
-            include: [
-                {
-                    model: Ticket,
-                    as: "Ticket",
-                    attributes: ["id", "title", "price", "status", "eventDate"]
-                }
-            ],
             order: [["createdAt", "DESC"]]
         })
 
@@ -101,13 +94,7 @@ export const completeOrder = async (req, res) => {
         const userId = req.user.userId
 
         const order = await Order.findOne({
-            where: { id, userId },
-            include: [
-                {
-                    model: Ticket,
-                    as: "Ticket"
-                }
-            ]
+            where: { id, userId }
         })
 
         if (!order) return res.status(404).json({ error: "Ordine non trovato" })

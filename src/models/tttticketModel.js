@@ -1,4 +1,4 @@
-import { DataTypes } from "sequelize"
+/*import { DataTypes } from "sequelize"
 import sequelize from "../config/db.js"
 
 const Ticket = sequelize.define(
@@ -44,4 +44,4 @@ const Ticket = sequelize.define(
     }
 )
 
-export default Ticket
+export default Ticket */
