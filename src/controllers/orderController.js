@@ -1,9 +1,18 @@
 import Order from "../models/orderModel.js"
-import Ticket from "../models/ticketModel.js"
 import redis from "../redisClient.js"
-import { getTicketById } from "../utils/getTicketById.js"
 import { Op } from "sequelize"
+// RECUPERO BIGLIETTO DALLA CACHE LOCALE
 
+const getTicketById = async ticketId => {
+    try {
+        const ticketData = await redis.get(`ticket:${ticketId}`)
+        if (!ticketData) return null
+        return JSON.parse(ticketData)
+    } catch (error) {
+        console.error("Errore durante il recupero del ticket da Redis:", error)
+        return null
+    }
+}
 // CREA UN ORDINE
 export const createOrder = async (req, res) => {
     try {
@@ -24,9 +33,25 @@ export const createOrder = async (req, res) => {
         // Verifica se il biglietto è disponibile
         if (ticket.status !== "disponibile") return res.status(400).json({ error: "Biglietto non disponibile" })
 
+        // Verifica se esiste già un ordine attivo per questo ticket
+        const existingOrder = await Order.findOne({
+            where: {
+                ticketId,
+                status: "impegnato",
+                expiresAt: { [Op.gt]: new Date() }
+            }
+        })
+        if (existingOrder) {
+            return res.status(409).json({
+                error: "Esiste già un ordine attivo per questo biglietto",
+                existingOrderId: existingOrder.id
+            })
+        }
+
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000) //scade fra 15 minuti
 
-        await ticket.update({ status: "impegnato" })
+        ticket.status = "impegnato"
+        await redis.set(`ticket:${ticket.id}`, JSON.stringify(ticket))
 
         const order = await Order.create({
             userId,
@@ -88,8 +113,12 @@ export const cancelOrder = async (req, res) => {
         if (order.userId !== userId) return res.status(403).json({ error: "Accesso negato all'ordine" })
         if (order.status !== "impegnato") return res.status(400).json({ error: "Solo ordini 'impegnato' possono essere annullati" })
 
-        const ticket = await Ticket.findByPk(order.ticketId)
-        if (ticket) await ticket.update({ status: "disponibile" })
+        const ticketData = await redis.get(`ticket:${order.ticketId}`)
+        if (ticketData) {
+            const ticket = JSON.parse(ticketData)
+            ticket.status = "disponibile"
+            await redis.set(`ticket:${ticket.id}`, JSON.stringify(ticket))
+        }
 
         await order.destroy()
 
@@ -117,7 +146,7 @@ export const completeOrder = async (req, res) => {
 
         const order = await Order.findOne({
             where: { id, userId },
-            include: [{ model: Ticket }]
+            include: []
         })
 
         if (!order) return res.status(404).json({ error: "Ordine non trovato" })
@@ -125,7 +154,13 @@ export const completeOrder = async (req, res) => {
         if (new Date(order.expiresAt) < new Date()) return res.status(400).json({ error: "Ordine scaduto" })
 
         await order.update({ status: "acquistato" })
-        await order.Ticket.update({ status: "acquistato" })
+
+        const ticketData = await redis.get(`ticket:${order.ticketId}`)
+        if (ticketData) {
+            const ticket = JSON.parse(ticketData)
+            ticket.status = "acquistato"
+            await redis.set(`ticket:${ticket.id}`, JSON.stringify(ticket))
+        }
 
         await redis.publish(
             "ordine-completato",
@@ -140,8 +175,8 @@ export const completeOrder = async (req, res) => {
             message: "Ordine completato con successo",
             orderId: order.id,
             ticket: {
-                title: order.Ticket.title,
-                price: order.Ticket.price
+                ticketId: order.ticketId,
+                status: "acquistato"
             }
         })
     } catch (error) {
