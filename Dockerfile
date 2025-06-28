@@ -1,20 +1,20 @@
-# 1. Immagine base
-FROM node:18
+# 1. Immagine base più leggera
+FROM node:18.20-alpine
 
-# 2. La directory di lavoro
+# 2. Imposta la working directory
 WORKDIR /src
 
-# 3. Copia package.json e package-lock.json
+# 3. Imposta NODE_ENV
+ENV NODE_ENV=production
+
+# 4. Copia i file necessari
 COPY package*.json ./
 
-# 4. Installazione le dipendenze
-RUN npm install
-
-# 5. Si copia il resto del codice nell'immagine
+# 5. Copia tutto il resto
 COPY . .
 
 # 6. Espone la porta
 EXPOSE 3003
 
-# 7. Comando di default per avviare il servizio
+# 7. Comando di default
 CMD ["npm", "start"]

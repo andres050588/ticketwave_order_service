@@ -1,4 +1,6 @@
 import Order from "../models/orderModel.js"
+import Ticket from "../models/ticketModel.js"
+import redis from "../redisClient.js"
 import { getTicketById } from "../utils/getTicketById.js"
 import { Op } from "sequelize"
 
@@ -32,6 +34,16 @@ export const createOrder = async (req, res) => {
             status: "impegnato",
             expiresAt
         })
+
+        await redis.publish(
+            "ordine-creato",
+            JSON.stringify({
+                orderId: order.id,
+                ticketId: ticket.id,
+                userId: userId,
+                expiresAt
+            })
+        )
 
         res.status(201).json({
             orderId: order.id,
@@ -80,6 +92,16 @@ export const cancelOrder = async (req, res) => {
         if (ticket) await ticket.update({ status: "disponibile" })
 
         await order.destroy()
+
+        await redis.publish(
+            "ordine-annullato",
+            JSON.stringify({
+                orderId: order.id,
+                ticketId: order.ticketId,
+                userId: order.userId
+            })
+        )
+
         res.json({ message: "Ordine annullato e biglietto disponibile" })
     } catch (error) {
         console.error("Errore nell'annullamento ordine:", error)
@@ -94,7 +116,8 @@ export const completeOrder = async (req, res) => {
         const userId = req.user.userId
 
         const order = await Order.findOne({
-            where: { id, userId }
+            where: { id, userId },
+            include: [{ model: Ticket }]
         })
 
         if (!order) return res.status(404).json({ error: "Ordine non trovato" })
@@ -103,6 +126,15 @@ export const completeOrder = async (req, res) => {
 
         await order.update({ status: "acquistato" })
         await order.Ticket.update({ status: "acquistato" })
+
+        await redis.publish(
+            "ordine-completato",
+            JSON.stringify({
+                orderId: order.id,
+                ticketId: order.ticketId,
+                userId: order.userId
+            })
+        )
 
         res.status(200).json({
             message: "Ordine completato con successo",
