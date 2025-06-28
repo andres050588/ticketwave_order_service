@@ -1,6 +1,6 @@
 import express from "express"
 import { createOrder, completeOrder, getUserOrders, cancelOrder } from "../controllers/orderController.js"
-import { verifyToken, verifyAdmin } from "../../../common/middlewares/verifyToken.js"
+import { verifyToken, verifyAdmin } from "../middleware/verifyToken.js"
 const routerOrders = express.Router()
 
 // POST api/orders - crea un ordine autenticato

@@ -9,6 +9,7 @@ ENV NODE_ENV=production
 
 # 4. Copia i file necessari
 COPY package*.json ./
+RUN npm install --production
 
 # 5. Copia tutto il resto
 COPY . .
