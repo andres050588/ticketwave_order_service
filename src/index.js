@@ -19,10 +19,25 @@ cron.schedule("*/1 * * * *", async () => {
 })
 
 async function startServer() {
-    try {
-        await sequelize.authenticate()
-        console.log("✅ Connessione a MySQL riuscita")
+    let retries = 5
+    while (retries) {
+        try {
+            await sequelize.authenticate()
+            console.log("✅ Connessione al database riuscita!")
+            break
+        } catch (err) {
+            console.error("❌ Connessione al DB fallita, ritento...", err.message)
+            retries -= 1
+            await new Promise(res => setTimeout(res, 5000))
+        }
+    }
 
+    if (!retries) {
+        console.error("❌ Impossibile connettersi al DB dopo vari tentativi.")
+        process.exit(1)
+    }
+
+    try {
         await sequelize.sync({}) // aggiungo { force: true } se voglio ressetare i dati nella db
         console.log("🧩 Modelli sincronizzati con il database")
 
@@ -31,7 +46,7 @@ async function startServer() {
             console.log(`🎧 Order Service attivo sulla porta ${PORT}`)
         })
     } catch (err) {
-        console.error("❌ Errore nella connessione al DB:", err)
+        console.error("❌ Errore nell'avvio del server:", err)
     }
 }
 
