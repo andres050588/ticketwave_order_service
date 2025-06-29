@@ -95,7 +95,25 @@ export const getUserOrders = async (req, res) => {
             order: [["createdAt", "DESC"]]
         })
 
-        res.json(orders)
+        // Recupera i dati dei ticket da Redis e aggiungili manualmente
+        const enrichedOrders = await Promise.all(
+            orders.map(async order => {
+                const ticketData = await redis.get(`ticket:${order.ticketId}`)
+                let ticket = null
+                try {
+                    ticket = ticketData ? JSON.parse(ticketData) : null
+                } catch (e) {
+                    console.error("Errore parsing JSON del ticket:", e)
+                }
+
+                return {
+                    ...order.toJSON(),
+                    ticket
+                }
+            })
+        )
+
+        res.json(enrichedOrders)
     } catch (error) {
         console.error("Errore nel recupero degli ordini:", error)
         res.status(500).json({ error: "Errore interno del server" })

@@ -3,10 +3,25 @@ import "./events/subscriber.js"
 import sequelize from "./config/db.js"
 import { startRedisSubscribers } from "./events/subscriber.js"
 import routerOrders from "./routes/orderRoutes.js"
+import cors from "cors"
 import cron from "node-cron"
 import checkExpiredOrders from "./cron/checkExpiredOrders.js"
 
 const app = express()
+
+app.use(
+    cors({
+        origin: "http://localhost:8080",
+        credentials: true
+    })
+)
+app.options(
+    "*",
+    cors({
+        origin: "http://localhost:8080",
+        credentials: true
+    })
+)
 app.use(express.json())
 
 app.use("/api", routerOrders)
