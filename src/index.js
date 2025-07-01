@@ -38,7 +38,7 @@ async function startServer() {
     while (retries) {
         try {
             await sequelize.authenticate()
-            console.log("✅ Connessione al database riuscita!")
+            console.log("Connessione al database order_service riuscita!")
             break
         } catch (err) {
             console.error("❌ Connessione al DB fallita, ritento...", err.message)
@@ -54,11 +54,11 @@ async function startServer() {
 
     try {
         await sequelize.sync({}) // aggiungo { force: true } se voglio ressetare i dati nella db
-        console.log("🧩 Modelli sincronizzati con il database")
+        console.log("Modello Order Sequelize sincronizzato")
 
         await startRedisSubscribers()
         app.listen(PORT, () => {
-            console.log(`🎧 Order Service attivo sulla porta ${PORT}`)
+            console.log(`Order Service attivo sulla porta ${PORT}`)
         })
     } catch (err) {
         console.error("❌ Errore nell'avvio del server:", err)

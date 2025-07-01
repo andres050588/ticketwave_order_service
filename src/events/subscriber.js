@@ -3,7 +3,6 @@ import redis from "../redisClient.js"
 
 export async function startRedisSubscribers() {
     const subscriber = redis.duplicate()
-    console.log("🔍 Redis config (subscriber):", redis.options)
 
     await subscriber.subscribe("user-aggiornato")
     await subscriber.subscribe("ticket-creato")
@@ -16,7 +15,7 @@ export async function startRedisSubscribers() {
                 if (!userData.id || !userData.email) return
 
                 await cacheUserData(userData)
-                console.log("📥 Utente aggiornato nella cache:", userData.id)
+                console.log("Utente aggiornato nella cache:", userData.id)
             } catch (err) {
                 console.error("❌ Errore nel parsing user-aggiornato:", err)
             }
@@ -38,7 +37,7 @@ export async function startRedisSubscribers() {
         }
     })
 
-    console.log("[order_service] ✅ Subscriber attivo per user-aggiornato, ticket-cancellato e ticket-creato")
+    console.log("[order_service] Subscriber attivo per user-aggiornato, ticket-cancellato e ticket-creato")
 
     // -------------Cache User_Data e Cache_Ticket_Data-------------
 
@@ -52,7 +51,7 @@ export async function startRedisSubscribers() {
 
         try {
             await redis.set(key, value)
-            console.log(`💾 Cache aggiornata per ${key}`)
+            console.log(`Cache aggiornata per ${key}`)
         } catch (err) {
             console.error("❌ Errore nel salvataggio in cache Redis:", err)
         }
@@ -71,7 +70,7 @@ export async function startRedisSubscribers() {
 
         try {
             await redis.set(key, value)
-            console.log(`💾 Ticket salvato in cache: ${key}`)
+            console.log(`Ticket salvato in cache: ${key}`)
         } catch (err) {
             console.error("❌ Errore nel salvataggio del ticket in cache Redis:", err)
         }
